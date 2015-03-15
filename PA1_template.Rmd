@@ -1,25 +1,84 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Untitled"
+output: html_document
 ---
 
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-## Loading and preprocessing the data
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r, echo=TRUE}
+
+ data<-read.csv("activity.csv")
+library("plyr", lib.loc="~/R/win-library/3.1")
+library("dplyr", lib.loc="~/R/win-library/3.1")
+library("lubridate")
+
+grouped<-group_by(data,date)
+new<-summarize(grouped,sum=sum(steps))
+
+hist(new$sum,xlab="steps",col="green")
+
+mean<-mean(new$sum,na.rm=TRUE)
+median<-median(new$sum,na.rm=TRUE)
+
+```
+
+You can also embed plots, for example:
+
+```{r, echo=TRUE}
+newdata<-mutate(data,interval=minutes(interval))
+datetime<-mutate(newdata,datetime=ymd(date)+interval)
 
 
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
+intervals1<-group_by(data,interval)
+intervals2<-summarize(intervals1,avg=mean(steps,na.rm=TRUE))
 
 
+with(intervals2,plot(interval,avg,ylab="average",xlab="5 min intervals",type="l"))
+dev.copy(png,file="intervals.png")
+dev.off()
 
-## Imputing missing values
+x<-intervals2[which(intervals2$avg==max(intervals2$avg)),]
+x[1,1]##the interval in which the avg is maximum
+```
 
 
+```{r, echo=TRUE}
+##Part 3:  Imputing missing values
+sum(is.na(data$steps))
+z<-mean(intervals2$avg)
+newdata<-mutate(data,steps=replace(data$steps,is.na(data$steps),z))
 
-## Are there differences in activity patterns between weekdays and weekends?
+grouped<-group_by(newdata,date)
+new1<-summarize(grouped,sum=sum(steps))
+hist(new1$sum,xlab="steps",col="red",main="with no NA")
+meansteps<-mean(new1$sum)
+mediansteps<-median(new1$sum)
+
+```
+
+
+```{r, echo=TRUE}
+
+weeks<-mutate(newdata,day=weekdays(ymd(date)))
+c<-as.factor(weeks$day)
+levels(c)<-list(weekday=c("Monday","Tuesday","Wednesday","Thursday","Friday"),weekend=c("Saturday","Sunday"))
+weekdata<-cbind(weeks,c)
+
+##splitting data for seperate weekdays n weekends
+
+
+newweek<-split(weekdata,weekdata$c)
+
+weekend1<-newweek$weekend
+    weekend2<-group_by(weekend1,interval)
+    weekend3<-summarize(weekend2,avg=mean(steps))
+weekday1<-newweek$weekday
+    weekday2<-group_by(weekday1,interval)
+    weekday3<-summarize(weekday2,avg=mean(steps))
+
+##plotting graphs
+with(weekday3,plot(interval,avg,ylab="average",xlab="5 min intervals",main="weekday",type="l"))
+
+with(weekend3,plot(interval,avg,ylab="average",xlab="5 min intervals",main="weekend",type="l"))
